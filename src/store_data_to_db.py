@@ -10,6 +10,7 @@
 import json
 import psycopg2
 import re
+import datetime as dt
 
 # Postgresql DB Name
 DB_Name = "geodb"
@@ -19,7 +20,7 @@ DB_Name = "geodb"
 
 class DatabaseManager():
     def __init__(self):
-        self.conn = psycopg2.connect(database=DB_Name, user="geodbuser", password="", host="127.0.0.1", port="5432")
+        self.conn = psycopg2.connect(database=DB_Name, user="", password="", host="", port="")
         self.cur = self.conn.cursor()
         print "Opened database successfully"
 
@@ -34,9 +35,9 @@ class DatabaseManager():
         self.cur.close()
         return
 
-    # def __del__(self):
-    #     self.cur.close()
-    #     self.conn.close()
+    def __del__(self):
+        self.cur.close()
+        self.conn.close()
 
 
 # ===============================================================
@@ -50,22 +51,24 @@ def data_handler(userid, jsonData):
     latitude = json_data['latitude']
     longitude = json_data['longitude']
     altitude = json_data['altitude']
-    timestamp = json_data['timestamp']
+    unix_timestamp = json_data['timestamp'] # Because MQTT is not sending unix_timestamp in seconds use: TO_TIMESTAMP/1000
 
-    print userid, latitude, longitude, altitude, timestamp
-    myuserid = str(userid)
+    print userid, latitude, longitude, altitude, unix_timestamp
 
     # Push into DB Table
     dbObj = DatabaseManager()
-    dbObj.add_del_update_db_record("INSERT INTO location_data (user_id,latitude,longitude,altitude,timestamp) VALUES (%s,%s,%s,%s,%s);", (myuserid, latitude, longitude, altitude, timestamp))
-    # del dbObj
+    dbObj.add_del_update_db_record(
+        "INSERT INTO location (user_id,latitude,longitude,altitude,timestamp,raw_timestamp) "
+        "VALUES (%s,%s,%s,%s,TO_TIMESTAMP(%s::bigint/1000.0),%s);",
+        (userid, latitude, longitude, altitude, unix_timestamp, unix_timestamp)
+    )
+    del dbObj
     print "Inserted location data into database."
     print ""
 
 
 # ===============================================================
 # Master Function to Select DB Funtion based on MQTT Topic
-
 def location_data_handler(inputtopic, jsonData):
     if re.match(r'^location', inputtopic):
         topic, userid = inputtopic.split("/")
@@ -79,5 +82,3 @@ def location_data_handler(inputtopic, jsonData):
         data_handler(userid, jsonData)
     else:
         print "Wrong topic, not saving to db..."
-
-# ===============================================================
