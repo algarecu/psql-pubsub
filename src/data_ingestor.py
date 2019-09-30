@@ -63,10 +63,8 @@ def process_json__data(MQTT_TOPIC, the_filename):
 		print("Wrong topic, not saving to db...")
 
 def on_message(client, obj, message):
-	# the_message = json.loads(message.payload)
 	the_filename = message.payload
 	process_json__data(message.topic, the_filename)
-	# the_message_decoded = str(message.payload.decode("utf-8","ignore"))
 
 def on_publish(mqttc, obj, mid):
     print("Published to: " + str(mqttc))
