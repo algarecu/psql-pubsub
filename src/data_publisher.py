@@ -24,24 +24,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Bang the MQTT broker with a JSON!',
                                      prog='data_publisher.py',
                                      usage='%(prog)s [options]')
-    parser.add_argument('--file', help='config.json payload in JSON format',
+    parser.add_argument('--filename', help='Pass name of payload in JSON format',
                         default='config/geoblock.json')
     parser.print_help()
 
     # Parse authentication details
     try:
         args = parser.parse_args()
+        filename = args.filename
+        print(filename)
     except Exception as e:
         logger.error(e)
 
-    # Get the json
-    file = args.file
-    with open(file, 'rb') as json_file:
-        parsed_json = json.load(json_file)
-
-    raw = json.dumps(parsed_json, indent=4)
+#    file = args.file
+#    with open(file, 'rb') as json_file:
+#        parsed_json = json.load(json_file)
+#    json_file.close()
+#    raw = json.dumps(parsed_json, indent=4)
 
     mqttc = mqtt.Client("python_publisher")
     mqttc.connect("localhost", 1883)
-    ret = mqttc.publish(MQTT_TOPIC, payload=raw, qos=0, retain=False)
+    ret = mqttc.publish(MQTT_TOPIC, payload=filename, qos=0, retain=False)
     mqttc.loop()
