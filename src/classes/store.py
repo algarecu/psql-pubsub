@@ -20,7 +20,7 @@ MQTT_TOPIC = "data"
 # ===============================================================
 # Database Manager Class
 
-class DatabaseManager(object):
+class DatabaseManager():
     def __init__(self):
         try:
             self.conn = psycopg2.connect(database=DB_Name, user="postgres",

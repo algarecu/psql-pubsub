@@ -8,6 +8,7 @@ import paho.mqtt.client as mqtt
 
 import re
 import classes.store as st
+import argparse
 import psycopg2
 import logging
 import requests
@@ -17,12 +18,10 @@ import csv
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-MQTT_TOPIC = "data"
-
 def file_opener(filename):
 	try:
 		# change inital url to localhost:8001
-		url = "http://34.77.101.91:8001/files/"
+		url = "http://localhost:8001/files/"
 		filename = filename.decode('utf-8')
 		url = url + filename
 
@@ -50,16 +49,14 @@ def data_handler_csv(filename):
 				longitude = row[3]
 				altitude = row[4]
 				time = row[5]
-				time = time[1:-3]
-				# geom_tuple = tuple(latitude, longitude, altitude)
+				time = time[0:len(row[5])-3]
 
-				args = (facilitator, address, latitude, longitude, altitude, time) # geom_tuple
+				args = (facilitator, address, latitude, longitude, altitude, time, longitude, latitude)
 
 				# Push into DB Table
-				sql_query = "INSERT INTO locations (facilitator, address, latitude, longitude, altitude, time) " \
-							"VALUES (%s,%s,%s,%s,%s,TO_TIMESTAMP(%s::bigint/1000.0));"
-				# @TODO ST_SetSRID(ST_MakePoint(%s), 4326)
-				# @TODO cambiar formato timestamp
+				sql_query = "INSERT INTO locations (facilitator, address, latitude, longitude, altitude, time, geom)" \
+							"VALUES (%s,%s,%s,%s,%s,TO_TIMESTAMP(%s::bigint), ST_SetSRID(ST_MakePoint(%s,%s),4326)::geometry);"
+				print(sql_query)
 				dbObj.query(sql_query, args)
 				logging.info('Processing block: 0x'+str(filename))
 			except (Exception, psycopg2.DatabaseError) as error:
@@ -80,7 +77,6 @@ def data_handler_json(filename):
 			longitude = jsonData[i]['longitude']
 			altitude = jsonData[i]['altitude']
 			time = jsonData[i]['timestamp']  # Because MQTT is not sending unix_timestamp in seconds use: TO_TIMESTAMP/1000
-			# geom_tuple = tuple(latitude, longitude, altitude)
 
 			args = (facilitator, address, latitude, longitude, altitude, time) # geom_tuple
 
@@ -104,7 +100,7 @@ def process_json__data(MQTT_TOPIC, the_filename):
 	else:
 		print("Wrong topic, not saving to db...")
 
-def on_message(client, obj, message):
+def on_message(client, userdata, message):
 	the_filename = message.payload
 	process_json__data(message.topic, the_filename)
 
@@ -116,7 +112,6 @@ def on_subscribe(mqttc, obj, mid, granted_qos):
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
-	print("Enter connect")
 	if rc == 0:
 		print("connected OK Returned code=", rc)
 		client.subscribe("data")
@@ -124,13 +119,29 @@ def on_connect(client, userdata, flags, rc):
 		print("Bad connection Returned code= ", rc)
 
 if __name__ == '__main__':
-	mqttc = mqtt.Client()
+	parser = argparse.ArgumentParser(
+		description='Data Ingestor',
+		prog='data_ingestor.py',
+		usage='%(prog)s [options]')
+	parser.add_argument('--topic',
+						help='topic to subscribe to',
+						default='data')
+	parser.print_help()
 
-	# Assign event callback
-	mqttc.on_connect = on_connect
-	mqttc.on_message = on_message
+	# Parse program parameters
+	try:
+		args = parser.parse_args()
+		topic = args.topic
 
-	mqttc.connect("localhost", 1883, 60)
-	mqttc.subscribe("data", 1)
-	mqttc.loop_forever()
+		# Create client
+		mqttc = mqtt.Client()
+
+		# Assign event callback
+		mqttc.on_connect = on_connect
+		mqttc.on_message = on_message
+		mqttc.connect("localhost", 1883, 60)
+		mqttc.subscribe(topic, 1)
+		mqttc.loop_forever()
+	except Exception as e:
+		logger.error(e)
 
