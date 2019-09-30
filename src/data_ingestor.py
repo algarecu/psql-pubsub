@@ -48,7 +48,7 @@ def data_handler(filename):
 						"VALUES (%s,%s,%s,%s,%s,TO_TIMESTAMP(%s::bigint/1000.0));"
 
 			dbObj.query(sql_query, args)
-			logging.info('Processed data into DB ')
+			logging.info('Processing block: 0x'+str(filename))
 			i += 1
 		except (Exception, psycopg2.DatabaseError) as error:
 			logging.info(error)
