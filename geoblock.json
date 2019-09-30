@@ -1,0 +1,20 @@
+[
+{
+	"facilitator": "0x9d29c98439b35eedf26ea83b1133cf31",
+	"address": "0xaab0d3a09083707bfddb0b618dc24bea",
+	"latitude": 68.0637,
+	"longitude": 167.468,
+	"altitude": 385,
+	"time": 1566744204000,
+	"geom": "0101000020E6100000CEC29E76F8EE644055302AA913045140"
+},
+{
+        "facilitator": "0x9d29c98439b35eedf26ea83b1133c432",
+        "address": "0xaab0d3a09083707bfddb0b618dc24fea",
+        "latitude": 90.0637,
+        "longitude": 90.468,
+        "altitude": 384,
+        "time": 1466744204000,
+        "geom": "0101000020E6100000CEC29E76F8EE644055302AA913045140"
+}
+]
