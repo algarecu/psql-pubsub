@@ -7,11 +7,12 @@
 import paho.mqtt.client as mqtt
 
 import re
-import json
 import classes.store as st
-import logging
 import psycopg2
+import logging
 import requests
+import os
+import csv
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -20,17 +21,53 @@ MQTT_TOPIC = "data"
 
 def file_opener(filename):
 	try:
-		# change to localhost this url
-		url = "http://34.77.101.91:8001/files/" + filename
+		# change inital url to localhost:8001
+		url = "http://34.77.101.91:8001/files/"
+		filename = filename.decode('utf-8')
+		url = url + filename
+
 		response = requests.get(url)
-		json_response = response.json()
-		print(json_response)
-		return json_response
+		print(type(response))
+		with open(os.path.join(".", "buffer.csv"), 'wb') as f:
+			f.write(response.content)
+		f.close()
+		return
 	except IOError as err:
 		raise(err)
 
-# Function to save location to DB Table
-def data_handler(filename):
+def data_handler_csv(filename):
+	file_opener(filename)
+	with open('buffer.csv', newline='') as csv_file:
+		csv_reader = csv.reader(csv_file, delimiter=';')
+		for row in csv_reader:
+			print(', '.join(row))
+			try:
+				dbObj = st.DatabaseManager()
+
+				facilitator = row[0]
+				address = row[1]
+				latitude = row[2]
+				longitude = row[3]
+				altitude = row[4]
+				time = row[5]
+				time = time[1:-3]
+				# geom_tuple = tuple(latitude, longitude, altitude)
+
+				args = (facilitator, address, latitude, longitude, altitude, time) # geom_tuple
+
+				# Push into DB Table
+				sql_query = "INSERT INTO locations (facilitator, address, latitude, longitude, altitude, time) " \
+							"VALUES (%s,%s,%s,%s,%s,TO_TIMESTAMP(%s::bigint/1000.0));"
+				# @TODO ST_SetSRID(ST_MakePoint(%s), 4326)
+				# @TODO cambiar formato timestamp
+				dbObj.query(sql_query, args)
+				logging.info('Processing block: 0x'+str(filename))
+			except (Exception, psycopg2.DatabaseError) as error:
+				logging.info(error)
+				raise (error)
+			dbObj.close()
+
+def data_handler_json(filename):
 	jsonData = file_opener(filename)
 	i = 0
 	while i < len(jsonData):
@@ -43,13 +80,15 @@ def data_handler(filename):
 			longitude = jsonData[i]['longitude']
 			altitude = jsonData[i]['altitude']
 			time = jsonData[i]['timestamp']  # Because MQTT is not sending unix_timestamp in seconds use: TO_TIMESTAMP/1000
+			# geom_tuple = tuple(latitude, longitude, altitude)
 
-			args = (facilitator, address, latitude, longitude, altitude, time)
+			args = (facilitator, address, latitude, longitude, altitude, time) # geom_tuple
 
 			# Push into DB Table
-			sql_query = "INSERT INTO locations (facilitator, address, latitude, longitude, altitude, time) " \
+			sql_query = "INSERT INTO locations (facilitator, address, latitude, longitude, altitude, time, geom_tuple) " \
 						"VALUES (%s,%s,%s,%s,%s,TO_TIMESTAMP(%s::bigint/1000.0));"
-
+			# @TODO ST_SetSRID(ST_MakePoint(%s), 4326)
+			# @TODO cambiar formato timestamp
 			dbObj.query(sql_query, args)
 			logging.info('Processing block: 0x'+str(filename))
 			i += 1
@@ -61,7 +100,7 @@ def data_handler(filename):
 def process_json__data(MQTT_TOPIC, the_filename):
 	if re.match("data", MQTT_TOPIC):
 		print("Inserting into db with topic: " + MQTT_TOPIC)
-		data_handler(the_filename)
+		data_handler_csv(the_filename)
 	else:
 		print("Wrong topic, not saving to db...")
 

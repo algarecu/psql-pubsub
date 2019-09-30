@@ -55,9 +55,6 @@ class DatabaseManager(object):
     def query(self, sql_query, args):
         return self.cur.execute(sql_query, args)
 
-    def query_many(self, sql_query, args):
-        return self.cur.executemany(sql_query,args)
-
     def close(self):
         self.conn.commit()
         self.conn.close()
