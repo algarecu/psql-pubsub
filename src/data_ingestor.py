@@ -11,6 +11,7 @@ import json
 import classes.store as st
 import logging
 import psycopg2
+import requests
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -19,11 +20,12 @@ MQTT_TOPIC = "data"
 
 def file_opener(filename):
 	try:
-		with open(filename, 'rb') as json_file:
-			# Mising to add path + filename: http://localhost:8001/files + filename
-			parsed_json = json.load(json_file)
-		json_file.close()
-		return parsed_json
+		# change to localhost this url
+		url = "http://34.77.101.91:8001/files/" + filename
+		response = requests.get(url)
+		json_response = response.json()
+		print(json_response)
+		return json_response
 	except IOError as err:
 		raise(err)
 
@@ -40,7 +42,7 @@ def data_handler(filename):
 			latitude = jsonData[i]['latitude']
 			longitude = jsonData[i]['longitude']
 			altitude = jsonData[i]['altitude']
-			time = jsonData[i]['time']  # Because MQTT is not sending unix_timestamp in seconds use: TO_TIMESTAMP/1000
+			time = jsonData[i]['timestamp']  # Because MQTT is not sending unix_timestamp in seconds use: TO_TIMESTAMP/1000
 
 			args = (facilitator, address, latitude, longitude, altitude, time)
 
