@@ -20,6 +20,7 @@ MQTT_TOPIC = "data"
 def file_opener(filename):
 	try:
 		with open(filename, 'rb') as json_file:
+			# Mising to add path + filename: http://localhost:8001/files + filename
 			parsed_json = json.load(json_file)
 		json_file.close()
 		return parsed_json
