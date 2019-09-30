@@ -29,7 +29,6 @@ def file_opener(filename):
 # Function to save location to DB Table
 def data_handler(filename):
 	jsonData = file_opener(filename)
-	print(jsonData)
 	i = 0
 	while i < len(jsonData):
 		try:

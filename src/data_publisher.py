@@ -36,12 +36,6 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(e)
 
-#    file = args.file
-#    with open(file, 'rb') as json_file:
-#        parsed_json = json.load(json_file)
-#    json_file.close()
-#    raw = json.dumps(parsed_json, indent=4)
-
     mqttc = mqtt.Client("python_publisher")
     mqttc.connect("localhost", 1883)
     ret = mqttc.publish(MQTT_TOPIC, payload=filename, qos=0, retain=False)
